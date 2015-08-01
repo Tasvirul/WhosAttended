@@ -1,0 +1,7 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="Theme.WhoseAttended" parent="Theme.AppCompat.Light.DarkActionBar"/>
+
+
+</resources>
