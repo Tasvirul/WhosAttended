@@ -6,7 +6,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
@@ -79,7 +78,6 @@ public class MainActivity extends AppCompatActivity {
                     mNewDevicesArrayAdapter.add(device.getName() + "\n" + device.getAddress());
                     mNewDevicesArrayAdapter.notifyDataSetChanged();
                 }
-
 
             }
         }

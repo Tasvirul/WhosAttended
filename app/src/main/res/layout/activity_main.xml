@@ -14,7 +14,7 @@
         android:layout_below="@+id/btnEnableBT"
         android:enabled="false"
         android:onClick="onClickbtnSearchDevices"
-        android:text="Geräte suchen" />
+        android:text="Take Attendance" />
 
     <Button
         android:id="@+id/btnEnableBT"

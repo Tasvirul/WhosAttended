@@ -1,47 +1,91 @@
 package com.monsteroftheheaven.whosattended;
 
 import android.annotation.TargetApi;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.Toast;
+import android.widget.ViewFlipper;
 
-
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URISyntaxException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Map;
 
-import jxl.Cell;
-import jxl.CellType;
-import jxl.Sheet;
-import jxl.Workbook;
-import jxl.read.biff.BiffException;
+import au.com.bytecode.opencsv.CSVReader;
+
 
 public class FileChooserActivity extends AppCompatActivity implements View.OnClickListener{
 
     private Button btnFileChooser;
+    private ViewFlipper myFlipper;
+    private AppPreference _appPrefs;
+    private Map<String,String> studentMap;
+    private static final int REQUEST_ENABLE_BT = 1;
+    private BluetoothAdapter mBluetoothAdapter = null;
+    private MyAdapter mNewDevicesArrayAdapter;
+    private ArrayList<StudentInfo> allStudent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        allStudent = new ArrayList<StudentInfo>();
         setContentView(R.layout.activity_file_chooser);
         btnFileChooser = (Button) findViewById(R.id.btn_file_chooser);
+        myFlipper = (ViewFlipper) findViewById(R.id.my_flipper);
+        _appPrefs = new AppPreference(getApplicationContext());
+        studentMap = _appPrefs.loadMap();
+        if(studentMap.isEmpty()){
+            myFlipper.setDisplayedChild(0);
+        }else{
+            for (Map.Entry<String, String> entry : studentMap.entrySet())
+            {
+                StudentInfo info = new StudentInfo(entry.getKey(),entry.getValue());
+                allStudent.add(info);
+            }
+            myFlipper.setDisplayedChild(1);
+        }
+
         btnFileChooser.setOnClickListener(this);
+        mNewDevicesArrayAdapter=new MyAdapter(this,allStudent);
+        ListView newDevicesListView = (ListView) findViewById(R.id.new_devices);
+        newDevicesListView.setAdapter(mNewDevicesArrayAdapter);
+        mNewDevicesArrayAdapter.notifyDataSetChanged();
+        // newDevicesListView.setOnItemClickListener(mDeviceClickListener);
+
+
+        // Register for broadcasts when a device is discovered
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        this.registerReceiver(mReceiver, filter);
+
+
+        filter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        this.registerReceiver(mReceiver, filter);
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     }
 
     @Override
@@ -112,11 +156,10 @@ public class FileChooserActivity extends AppCompatActivity implements View.OnCli
                     MimeTypeMap mime = MimeTypeMap.getSingleton();
                     String type = mime.getExtensionFromMimeType(cR.getType(uri));
                     Log.d("SOmETAG", "File Path: " + type);
-                    try {
-                        read(getPath(this,uri));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+
+                        //read(getPath(this,uri));
+                    readCsvFile(getPath(this, uri));
+
                     // Get the file instance
                     // File file = new File(path);
                     // Initiate the upload
@@ -247,36 +290,109 @@ public class FileChooserActivity extends AppCompatActivity implements View.OnCli
         return "com.android.providers.media.documents".equals(uri.getAuthority());
     }
 
-    public void read(String path) throws IOException {
-        File inputWorkbook = null;
-        Log.d("Original Path",path);
-            inputWorkbook = new File(path);
+    public void readCsvFile(String path){
 
-        Workbook w;
+        BufferedReader br = null;
+        String line = "";
+        String cvsSplitBy = ",";
+        String [] next;
         try {
-            w = Workbook.getWorkbook(inputWorkbook);
-            // Get the first sheet
-            Sheet sheet = w.getSheet(0);
-            // Loop over first 10 column and lines
 
-            for (int j = 0; j < sheet.getColumns(); j++) {
-                for (int i = 0; i < sheet.getRows(); i++) {
-                    Cell cell = sheet.getCell(j, i);
-                    CellType type = cell.getType();
-                    if (type == CellType.LABEL) {
-                        Log.d("I got a label "
-                                , cell.getContents());
-                    }
+            /*br = new BufferedReader(new FileReader(path));
+            while ((line = br.readLine()) != null) {
 
-                    if (type == CellType.NUMBER) {
-                        Log.d("I got a name "
-                                , cell.getContents());
-                    }
+                // use comma as separator
+                String[] country = line.split(cvsSplitBy);
 
+                Log.d("name= " + country[0]
+                        , " , Id=" + country[1] );
+
+            }*/
+            CSVReader reader = new CSVReader(new InputStreamReader(new FileInputStream(new File(path))));
+            while(true) {
+                next = reader.readNext();
+                if(next != null) {
+                    Log.d("name= " + next[0]
+                            , " , Id=" + next[1]);
+                    studentMap.put(next[0],next[1]);
+                    StudentInfo info = new StudentInfo(next[0],next[1]);
+                    allStudent.add(info);
+
+                } else {
+                    break;
+                }
+
+            }
+            mNewDevicesArrayAdapter.notifyDataSetChanged();
+            _appPrefs.saveMap(studentMap);
+            FileChooserActivity.this.myFlipper.setDisplayedChild(1);
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
-        } catch (BiffException e) {
-            e.printStackTrace();
         }
+
+    }
+
+    public void onClickbtnActivateBluetooth(View view)
+    {
+
+        if (mBluetoothAdapter == null)
+        {
+            Toast.makeText(this, "Bluetooth is not available !", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        else if (!mBluetoothAdapter.isEnabled())
+        {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
+        Toast.makeText(this, "Bluetooth has been activated!", Toast.LENGTH_LONG).show();
+        findViewById(R.id.btnSearchDevices).setEnabled(true);
+
+
+    }
+    // Create a BroadcastReceiver for ACTION_FOUND
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+
+            // When discovery finds a device
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                // Get the BluetoothDevice object from the Intent
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                // If it's already paired, skip it, because it's been listed already
+                if (device.getBondState() != BluetoothDevice.BOND_BONDED)
+                {
+                    //mNewDevicesArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+                    for(int i=0;i<allStudent.size();i++){
+                        if(mNewDevicesArrayAdapter.getItem(i).getStudentName().trim().equalsIgnoreCase(device.getName().trim())){
+                            mNewDevicesArrayAdapter.getItem(i).setStatus(true);
+                        }
+                    }
+                    mNewDevicesArrayAdapter.notifyDataSetChanged();
+                }
+
+            }
+        }
+    };
+
+    public void onClickbtnSearchDevices(View view)
+    {
+        mBluetoothAdapter.startDiscovery();
+        Toast.makeText(this, "Bluetooth devices are searched !", Toast.LENGTH_LONG).show();
+        // Find and set up the ListView for newly discovered devices
+
     }
 }
