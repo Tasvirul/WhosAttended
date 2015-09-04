@@ -47,7 +47,7 @@ public class AppPreference {
                 Iterator<String> keysItr = jsonObject.keys();
                 while(keysItr.hasNext()) {
                     String key = keysItr.next();
-                    String value = (String) jsonObject.get(key);
+                    String value = (String)jsonObject.get(key);
                     outputMap.put(key, value);
                 }
             }

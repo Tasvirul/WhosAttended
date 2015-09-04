@@ -11,7 +11,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 /**
- * Created by Tasvir on 8/3/2015.
+ * Created by Sayma on 8/3/2015.
  */
 public class MyAdapter extends BaseAdapter {
     private LayoutInflater mInflater;

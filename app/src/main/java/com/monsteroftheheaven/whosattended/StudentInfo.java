@@ -1,7 +1,7 @@
 package com.monsteroftheheaven.whosattended;
 
 /**
- * Created by Tasvir on 8/3/2015.
+ * Created by Sayma on 8/3/2015.
  */
 public class StudentInfo {
     private String studentName;

@@ -19,7 +19,7 @@
                 android:layout_centerInParent="true"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Choose An Excel To Load Student List"/>
+                android:text="Choose a Csv To Load Student List"/>
         </LinearLayout>
         <RelativeLayout
             android:layout_width="match_parent"
